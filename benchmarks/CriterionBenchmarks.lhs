@@ -10,6 +10,8 @@
 > import Control.Exception(evaluate)
 > import Control.DeepSeq.Generics(genericRnf)
 
+> import Test.QuickCheck.Gen (resize)
+
 > instance NFData Interval where
 >     rnf = genericRnf
 > instance NFData IntervalSet where
@@ -41,7 +43,7 @@
 > main = do
 >     -- generate a repeatable set of arbitrary values using a seed
 >     let x :: [IntervalSet]
->         x = unGen arbitrary (mkQCGen 10) 52
+>         x = unGen arbitrary (mkQCGen 0) 52
 >     x1 <- evaluate $ force x
 >     putStrLn $ "number of example datas: " ++ show (length x1)
 >              ++ "(" ++ intercalate "," (map (show . isLength) x1) ++ ")"
@@ -51,8 +53,8 @@
 >                   [(a,b) | a <- x1, b <- x1]
 >     putStrLn $ "number of interesting data pairs: " ++ show (length x1Pairs)
 >     defaultMain $
->         [doPack "pack-simple" packIntervalSet x1
->         ,doPack "pack-v2" packIntervalSet' x1
+>         [doPack "pack-model" packIntervalSetModel x1
+>         ,doPack "pack-v2" packIntervalSetv2 x1
 >         ,doUMinusTests "model-u_minus" modelUMinusIntervalSet x1Pairs
 >         --,doUMinusTests "u_minus-v2" uMinusIntervalSetv2 x1Pairs
 >         ,doUMinusTests "u_minus-v3" uMinusIntervalSetv3 x1Pairs

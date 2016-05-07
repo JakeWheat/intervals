@@ -1,5 +1,7 @@
 
-figure out how to run more quickcheck tests
+figure out how to run more quickcheck tests:
+time stack test --test-arguments "--quickcheck-tests 10000"
+
 figure out how to generate bigger individual data values for the
    benchmarking
 
@@ -29,7 +31,6 @@ add more interval operations with tests
 
 
 optimisation ideas:
-make the uminus a bit more streaming
 use a variation of vector or list of vectors to represent interval
   sets
 use completely unpacked columnar data representation
@@ -38,3 +39,21 @@ benchmark running isPacked function
 make sure we don't repeat packing
 get ghc profiling and code coverage working (coverage is more useful
    for monitoring the effectiveness of the testing)
+
+make sure the paylods aren't copied around (risk when moving to vector
+or unpacked vector)
+
+automation:
+
+automatically detect and highlight performance changes from code
+version to version, and see a graph of the performance changes over
+many code versions
+
+compare different implementations of code to choose the fastest
+version. This might change outside of code changes:
+depends on the data
+can depend on the external environment e.g. the os, or the hardware
+
+so want to be able to keep some alternatives alive and be able to go
+back and check them easily from time to time.
+

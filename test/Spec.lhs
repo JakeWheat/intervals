@@ -58,13 +58,13 @@ check that pack . unpack = unpack
 
 > intervalSetsPackAndUnpack :: T.TestTree
 > intervalSetsPackAndUnpack = T.testGroup "intervalSetsPackAndUnpack"
->     [intervalSetsPackUnpackEqUnpack packIntervalSet
->     ,intervalSetsUnpackPackEqPack packIntervalSet
+>     [intervalSetsPackUnpackEqUnpack packIntervalSetModel
+>     ,intervalSetsUnpackPackEqPack packIntervalSetModel
 >     ,intervalSetsUnpackUnpackEqUnpack
->     ,intervalSetsPackPackEqPack packIntervalSet
->     ,intervalSetsPackUnpackEqUnpack packIntervalSet'
->     ,intervalSetsUnpackPackEqPack packIntervalSet'
->     ,intervalSetsPackPackEqPack packIntervalSet'
+>     ,intervalSetsPackPackEqPack packIntervalSetModel
+>     ,intervalSetsPackUnpackEqUnpack packIntervalSetv2
+>     ,intervalSetsUnpackPackEqPack packIntervalSetv2
+>     ,intervalSetsPackPackEqPack packIntervalSetv2
 >     ]
 
 > intervalSetsPackUnpackEqUnpack :: (IntervalSet -> IntervalSet) -> T.TestTree
@@ -156,7 +156,7 @@ testing boilerplate
 
 > makeTasty (IntervalSetPackExample i0 i1) =
 >   H.testCase "IntervalSetPackExample" $
->   H.assertEqual "" (makeIntervalSet i1) $ packIntervalSet $ makeIntervalSet i0
+>   H.assertEqual "" (makeIntervalSet i1) $ packIntervalSetModel $ makeIntervalSet i0
 
 > makeTasty (IntervalSetUnpackExample i0 i1) =
 >   H.testCase "IntervalSetUnpackExample" $
@@ -167,8 +167,8 @@ testing boilerplate
 >     H.testCase "intervalSet-example" $ do
 >     let i0 = makeIntervalSet i0'
 >         i1 = makeIntervalSet i1'
->         ip0 = packIntervalSet i0
->         ip1 = packIntervalSet i1
+>         ip0 = packIntervalSetModel i0
+>         ip1 = packIntervalSetModel i1
 >         iu0 = unpackIntervalSet i0
 >         iu1 = unpackIntervalSet i1
 >     H.assertEqual "" ip0 ip1
@@ -192,7 +192,7 @@ testing boilerplate
 > main = T.defaultMain $
 >        (T.testGroup "tests" [makeTasty allTests
 >                             ,intervalSetsPackAndUnpack
->                             ,uMinusv2EqModelUMinus
+>                             --,uMinusv2EqModelUMinus
 >                             ,uMinusv3EqModelUMinus
 >                             ,uMinusv4EqModelUMinus
 >                             ,uMinusv5EqModelUMinus

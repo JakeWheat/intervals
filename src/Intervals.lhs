@@ -5,8 +5,11 @@
 >        ,makeInterval
 >        ,IntervalSet
 >        ,makeIntervalSet
+>        ,intervalSetsEquivalent
+>        ,isLength
+>        ,packIntervalSetModel
+>        ,packIntervalSetv2
 >        ,packIntervalSet
->        ,packIntervalSet'
 >        ,unpackIntervalSet
 >        ,modelUMinusIntervalSet
 >        ,uMinusIntervalSet
@@ -15,8 +18,6 @@
 >        ,uMinusIntervalSetv4
 >        ,uMinusIntervalSetv5
 >        ,uMinusIntervalSetv6
->        ,intervalSetsEquivalent
->        ,isLength
 >        ) where
 
 > import Data.List (nub,sort,(\\))
@@ -47,8 +48,8 @@ does sort and unique:
 > makeIntervalSet is = IS $ sort $ nub is
 
 
-> packIntervalSet :: IntervalSet -> IntervalSet
-> packIntervalSet tis' =
+> packIntervalSetModel :: IntervalSet -> IntervalSet
+> packIntervalSetModel tis' =
 >   let (IS tis) = unpackIntervalSet tis'
 >   in makeIntervalSet $ combineIs tis
 >   where
@@ -60,8 +61,8 @@ does sort and unique:
 
 'optimised' version of pack which doesn't go via unpack
 
-> packIntervalSet' :: IntervalSet -> IntervalSet
-> packIntervalSet' (IS tis) =
+> packIntervalSetv2 :: IntervalSet -> IntervalSet
+> packIntervalSetv2 (IS tis) =
 >   makeIntervalSet $ combineIs tis
 >   where
 >     combineIs [] = []
@@ -74,10 +75,14 @@ does sort and unique:
 >         let m1 x y z = (x <= z && y >= z) || (y + 1 == z)
 >         in m1 a b c || m1 c d a
 
+
+> packIntervalSet :: IntervalSet -> IntervalSet
+> packIntervalSet = packIntervalSetv2
+
 todo: some trivial tests for intervalSetsEquivalent
 
 > intervalSetsEquivalent :: IntervalSet -> IntervalSet -> Bool
-> intervalSetsEquivalent a b = packIntervalSet' a == packIntervalSet' b
+> intervalSetsEquivalent a b = packIntervalSet a == packIntervalSet b
 
 > unpackIntervalSet :: IntervalSet -> IntervalSet
 > unpackIntervalSet (IS is) =
@@ -90,7 +95,7 @@ todo: some trivial tests for intervalSetsEquivalent
 >     let (IS iu0) = unpackIntervalSet is0
 >         (IS iu1) = unpackIntervalSet is1
 >         resu = iu0 \\ iu1
->     in packIntervalSet' $ makeIntervalSet resu
+>     in packIntervalSet $ makeIntervalSet resu
 
 
 u_minus for interval sets using stream implementation, still uses
@@ -109,7 +114,7 @@ take another i0 and loop
 
 > uMinusIntervalSetv2 :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSetv2 (IS is0) (IS is1) =
->     packIntervalSet' $ makeIntervalSet $ f is0 is1
+>     packIntervalSet $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
 >     f i0s [] = i0s
@@ -132,8 +137,8 @@ fix 2: don't unpack the second arg
 
 > uMinusIntervalSetv3 :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSetv3 (IS is0) is1' =
->     let IS is1 = packIntervalSet' is1'
->     in packIntervalSet' $ makeIntervalSet $ f is0 is1
+>     let IS is1 = packIntervalSet is1'
+>     in packIntervalSet $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
 >     f i0s [] = i0s
@@ -151,9 +156,9 @@ fix 2: don't unpack the second arg
 
 > uMinusIntervalSetv4 :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSetv4 is0' is1' =
->     let IS is0 = packIntervalSet' is0'
->         IS is1 = packIntervalSet' is1'
->     in packIntervalSet' $ makeIntervalSet $ f is0 is1
+>     let IS is0 = packIntervalSet is0'
+>         IS is1 = packIntervalSet is1'
+>     in packIntervalSet $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
 >     f i0s [] = i0s
@@ -173,11 +178,11 @@ new algorithm still using packing and unpacking:
 
 > uMinusIntervalSetv5 :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSetv5 is0' is1' =
->     let IS is0 = packIntervalSet' is0'
->         IS is1 = packIntervalSet' is1'
+>     let IS is0 = packIntervalSet is0'
+>         IS is1 = packIntervalSet is1'
 >         is1Unpacked = flip map is1
 >                       $ \x -> (x,unpackInterval x)
->     in packIntervalSet' $ makeIntervalSet $ f is0 is1Unpacked
+>     in packIntervalSet $ makeIntervalSet $ f is0 is1Unpacked
 >   where
 >     unpackInterval :: Interval -> [Interval]
 >     unpackInterval (I a b) = map (\i -> I i i) [a..b]
@@ -199,9 +204,9 @@ finally without unpacking
 
 > uMinusIntervalSetv6 :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSetv6 is0' is1' =
->     let IS is0 = packIntervalSet' is0'
->         IS is1 = packIntervalSet' is1'
->     in packIntervalSet' $ makeIntervalSet $ f is0 is1
+>     let IS is0 = packIntervalSet is0'
+>         IS is1 = packIntervalSet is1'
+>     in packIntervalSet $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
 >     f i0s [] = i0s
@@ -242,3 +247,29 @@ finally without unpacking
 > uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSet = uMinusIntervalSetv6
 
+------------------------------
+
+not really a relation, but an interval set with a payload per row
+it's sorted on the intervals
+
+> {-data Relation a = Relation [(Interval,a)]
+
+> makeRelation
+
+> relationCount
+
+> 
+
+> unpackRelation :: 
+
+> packRelationModel
+
+> packRelationv2
+
+> packRelation
+
+> uminusModel
+
+> uminusv2
+
+> uminus-}
