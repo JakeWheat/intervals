@@ -13,10 +13,8 @@ ultimately, want to process all the layered events
 maybe start with unpack implementation
 then move to a sort/streaming implementation
 
-> import Data.List (nub,sort,(\\))
-
 > import Intervals
-
+> import ArbitraryIntervals ()
 > import qualified Test.Tasty as T
 > import qualified Test.Tasty.HUnit as H
 > import qualified Test.Tasty.QuickCheck as Q
@@ -69,15 +67,6 @@ check that pack . unpack = unpack
    unpack . pack = pack
    unpack . unpack = unpack
    pack . pack = pack
-
-> instance Q.Arbitrary Interval where
->   arbitrary = do
->     x <- Q.arbitrary
->     y <- Q.arbitrary
->     return $ if x > y
->              then I y x
->              else I x y
-
 
 > intervalSetsPackAndUnpack :: T.TestTree
 > intervalSetsPackAndUnpack = T.testGroup "intervalSetsPackAndUnpack"

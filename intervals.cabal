@@ -33,13 +33,31 @@ test-suite intervals-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.lhs
+  other-modules:       ArbitraryIntervals
   build-depends:       base
                      , intervals
                      , tasty
                      , tasty-hunit
                      , tasty-quickcheck
+                     , QuickCheck
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
   default-language:    Haskell2010
+
+benchmark criterion-benchmarks
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:   benchmarks,test
+  main-is:          CriterionBenchmarks.lhs
+  other-modules:    ArbitraryIntervals
+  build-depends:    base
+                  , criterion
+                  , intervals
+                  , random
+                  , deepseq
+                  , deepseq-generics
+                  , tasty-quickcheck
+                  , QuickCheck
+  ghc-options:      -threaded -rtsopts -with-rtsopts=-N -Wall
+  default-language: Haskell2010
 
 -- source-repository head
 --   type:     git

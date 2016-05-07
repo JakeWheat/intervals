@@ -1,4 +1,5 @@
 
+> {-# LANGUAGE DeriveGeneric #-}
 > module Intervals
 >        (Interval(..)
 >        ,makeInterval
@@ -12,9 +13,10 @@
 >        ) where
 
 > import Data.List (nub,sort,(\\))
+> import GHC.Generics (Generic)
 
 > data Interval = I Integer Integer
->                 deriving (Ord, Eq,Show)
+>                 deriving (Ord, Eq,Show,Generic)
 
 what about representing unit intervals with a different ctor?
 
@@ -27,7 +29,7 @@ what about representing unit intervals with a different ctor?
 maybe change interval set to vector or something for speed?
 
 > data IntervalSet = IS [Interval]
->                    deriving (Eq,Show)
+>                    deriving (Eq,Show,Generic)
 
 
 does sort and unique:
