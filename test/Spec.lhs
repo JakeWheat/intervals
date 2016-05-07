@@ -17,6 +17,7 @@ then move to a sort/streaming implementation
 
 
 > import qualified Test.Tasty as T
+> import qualified Test.Tasty.HUnit as H
 
 
 > data Interval = I Integer Integer
@@ -31,11 +32,27 @@ then move to a sort/streaming implementation
 tests:
 a few basic examples
 
-> intervalExamples :: [(Integer,Integer, Maybe Interval)]
-> intervalExamples = [(1,1, Just $ I 1 1)
->                    ,(1,2, Just $ I 1 2)
->                    ,(-1,2, Just $ I (-1) 2)
->                    ,(1,0, Nothing)]
+> intervalExamples :: Test
+> intervalExamples = Group "interval-examples"
+>     [IntervalExample 1 1 $ Just $ I 1 1
+>     ,IntervalExample 1 2 $ Just $ I 1 2
+>     ,IntervalExample (-1) 2 $ Just $ I (-1) 2
+>     ,IntervalExample 1 0 Nothing
+>     ]
+
+> data Test = Group String [Test]
+>           | IntervalExample Integer Integer (Maybe Interval)
+
+
+> makeTasty :: Test -> T.TestTree
+> makeTasty (Group nm ts) =  T.testGroup nm $ map makeTasty ts
+> makeTasty (IntervalExample b e r) =
+>     H.testCase ("interval-example: " ++ show (b,e,r)) $ do
+>     case makeInterval b e of
+>         Right r' -> H.assertEqual "" r (Just r')
+>         g@(Left {}) -> case r of
+>                        Nothing -> return ()
+>                        Just i -> H.assertEqual "" (Right i) g
 
 maybe change interval set to vector or something for speed?
 
@@ -88,8 +105,10 @@ can test against the generator
 and against the model implementation
 
 
-
+> allTests :: Test
+> allTests = Group "tests"
+>     [intervalExamples]
 
 > main :: IO ()
-> main = T.defaultMain $ T.testGroup "tests" []
+> main = T.defaultMain $ makeTasty allTests
 
