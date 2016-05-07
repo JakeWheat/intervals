@@ -10,6 +10,10 @@
 >        ,unpackIntervalSet
 >        ,modelUMinusIntervalSet
 >        ,uMinusIntervalSet
+>        ,uMinusIntervalSetv2
+>        ,uMinusIntervalSetv3
+>        ,uMinusIntervalSetv4
+>        ,uMinusIntervalSetv5
 >        ) where
 
 > import Data.List (nub,sort,(\\))
@@ -93,8 +97,8 @@ unpack i0, subtract each of the matching i1s without unpacking them
 then:
 take another i0 and loop
 
-> uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSet (IS is0) (IS is1) =
+> uMinusIntervalSetv2 :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSetv2 (IS is0) (IS is1) =
 >     packIntervalSet' $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
@@ -115,8 +119,105 @@ todo: subtract is very poor
 fix 1: only unpack the first arg
 fix 2: don't unpack the second arg
 
-quickcheck this against the model
 
+> uMinusIntervalSetv3 :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSetv3 (IS is0) is1' =
+>     let IS is1 = packIntervalSet' is1'
+>     in packIntervalSet' $ makeIntervalSet $ f is0 is1
+>   where
+>     f [] _ = []
+>     f i0s [] = i0s
+>     f (i0:i0s) i1s =
+>         let keepI1s = dropWhile (`strictlyLessThan` i0) i1s
+>             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0) keepI1s
+>         in subtractInterval i0 matchingI1s ++ f i0s keepI1s
+>     strictlyLessThan (I _ b) (I c _) = b < c
+>     strictlyGreaterThan (I a _) (I _ d) = d < a
+>     subtractInterval :: Interval -> [Interval] -> [Interval]
+>     subtractInterval (I a b) is =
+>         let (IS a1) = unpackIntervalSet $ IS [I a b]
+>             (IS a2) = unpackIntervalSet $ IS is
+>         in a1 \\ a2
+
+> uMinusIntervalSetv4 :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSetv4 is0' is1' =
+>     let IS is0 = packIntervalSet' is0'
+>         IS is1 = packIntervalSet' is1'
+>     in packIntervalSet' $ makeIntervalSet $ f is0 is1
+>   where
+>     f [] _ = []
+>     f i0s [] = i0s
+>     f (i0:i0s) i1s =
+>         let keepI1s = dropWhile (`strictlyLessThan` i0) i1s
+>             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0) keepI1s
+>         in subtractInterval i0 matchingI1s ++ f i0s keepI1s
+>     strictlyLessThan (I _ b) (I c _) = b < c
+>     strictlyGreaterThan (I a _) (I _ d) = d < a
+>     subtractInterval :: Interval -> [Interval] -> [Interval]
+>     subtractInterval (I a b) is =
+>         let (IS a1) = unpackIntervalSet $ IS [I a b]
+>             (IS a2) = unpackIntervalSet $ IS is
+>         in a1 \\ a2
+
+new algorithm still using packing and unpacking:
+
+> uMinusIntervalSetv5 :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSetv5 is0' is1' =
+>     let IS is0 = packIntervalSet' is0'
+>         IS is1 = packIntervalSet' is1'
+>         is1Unpacked = flip map is1
+>                       $ \x -> (x,unpackInterval x)
+>     in packIntervalSet' $ makeIntervalSet $ f is0 is1Unpacked
+>   where
+>     unpackInterval :: Interval -> [Interval]
+>     unpackInterval (I a b) = map (\i -> I i i) [a..b]
+>     f [] _ = []
+>     f i0s [] = i0s
+>     f (i0:i0s) i1s =
+>         let keepI1s = dropWhile ((`strictlyLessThan` i0) . fst) i1s
+>             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0 . fst) keepI1s
+>         in subtractInterval i0 matchingI1s ++ f i0s keepI1s
+>     strictlyLessThan (I _ b) (I c _) = b < c
+>     strictlyGreaterThan (I a _) (I _ d) = d < a
+>     subtractInterval :: Interval -> [(Interval,[Interval])] -> [Interval]
+>     subtractInterval (I a b) is =
+>         let (IS a1) = unpackIntervalSet $ IS [I a b]
+>         in a1 \\ concatMap snd is
+
+
+
+
+> {-uMinusIntervalSetv3 :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSetv3 (IS is0) (IS is1) =
+>     packIntervalSet' $ makeIntervalSet $ f is0 is1
+>   where
+>     f [] _ = []
+>     f i0s [] = i0s
+>     f (i0:i0s) i1s =
+>         let keepI1s = dropWhile (`strictlyLessThan` i0) i1s
+>             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0) keepI1s
+>         in subtractInterval i0 matchingI1s ++ f i0s keepI1s
+>     strictlyLessThan (I _ b) (I c _) = b < c
+>     strictlyGreaterThan (I a _) (I _ d) = d < a
+>     subtractInterval :: Interval -> [Interval] -> [Interval]
+>     subtractInterval (I a b) [] = [I a b]
+>     subtractInterval i@(I a b) ((I c d):is)
+>         | d < a || b < c = subtractInterval i is
+>          -- overlaps completely
+>         | c <= a &&  d >= b -> []
+>          -- overlaps start
+>         | c <= a &&  d >= b -> []
+>          -- overlaps end
+>          -- overlaps middle
+>     
+>     subtractInterval (I a b) is =
+>         let (IS a1) = unpackIntervalSet $ IS [I a b]
+>             (IS a2) = unpackIntervalSet $ IS is
+>         in a1 \\ a2 -}
+
+
+> uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSet = uMinusIntervalSetv2
 
 now: packRelation, unpackRelation, modelUMinusRelation, uMinusRelation
 these are the above with a payload for each entry
@@ -137,3 +238,15 @@ and against the model implementation
 
 use criterion to check optimisations
 implement the algorithm in postgres and compare times
+
+
+
+some optimisation ideas:
+
+use a variation of vector or list of vectors to represent interval
+  sets
+benchmark running pack on already packed
+benchmark running isPacked function
+make sure we don't repeat packing
+get ghc profiling and code coverage working
+

@@ -82,30 +82,25 @@ check that pack . unpack = unpack
 > intervalSetsPackUnpackEqUnpack :: (IntervalSet -> IntervalSet) -> T.TestTree
 > intervalSetsPackUnpackEqUnpack pack =
 >     Q.testProperty  "unpack . pack = unpack" $
->     \l -> let is = makeIntervalSet l
->           in (unpackIntervalSet . pack) is
->               == unpackIntervalSet is
+>     \is -> (unpackIntervalSet . pack) is
+>            == unpackIntervalSet is
 
 > intervalSetsUnpackPackEqPack :: (IntervalSet -> IntervalSet) -> T.TestTree
 > intervalSetsUnpackPackEqPack pack =
 >     Q.testProperty  "pack . unpack = pack" $
->     \l -> let is = makeIntervalSet l
->           in (pack . unpackIntervalSet) is
->               == pack is
+>     \is -> (pack . unpackIntervalSet) is
+>            == pack is
 
 > intervalSetsUnpackUnpackEqUnpack :: T.TestTree
 > intervalSetsUnpackUnpackEqUnpack =
 >     Q.testProperty  "unpack . unpack = unpack" $
->     \l -> let is = makeIntervalSet l
->           in (unpackIntervalSet . unpackIntervalSet) is
->               == unpackIntervalSet is
+>     \is -> (unpackIntervalSet . unpackIntervalSet) is
+>            == unpackIntervalSet is
 
 > intervalSetsPackPackEqPack :: (IntervalSet -> IntervalSet) -> T.TestTree
 > intervalSetsPackPackEqPack pack =
 >     Q.testProperty  "pack . pack = pack" $
->     \l -> let is = makeIntervalSet l
->           in (pack . pack) is
->               == pack is
+>     \is -> (pack . pack) is == pack is
 
 > uMinusISExamples :: Test
 > uMinusISExamples = Group "UMinusISExamples"
@@ -119,13 +114,34 @@ check that pack . unpack = unpack
 
 quickcheck this against the model
 
-> streamUMinusEqModelUMinus :: T.TestTree
-> streamUMinusEqModelUMinus =
->     Q.testProperty  "streaming u_minus == model u_minus" $
->     \l1 l2 -> let i1 = makeIntervalSet l1
->                   i2 = makeIntervalSet l2
->           in (i1 `modelUMinusIntervalSet` i2)
->              == (i1 `uMinusIntervalSet` i2)
+> minusAEqMinusB :: String
+>                -> (IntervalSet -> IntervalSet -> IntervalSet)
+>                -> (IntervalSet -> IntervalSet -> IntervalSet)
+>                -> T.TestTree
+> minusAEqMinusB nm f0 f1 =
+>     Q.testProperty nm $ \i0 i1 -> (i0 `f0` i1) == (i0 `f1` i1)
+
+> uMinusv2EqModelUMinus :: T.TestTree
+> uMinusv2EqModelUMinus =
+>     minusAEqMinusB "u_minus v2 == model u_minus"
+>         modelUMinusIntervalSet uMinusIntervalSetv2
+
+> uMinusv3EqModelUMinus :: T.TestTree
+> uMinusv3EqModelUMinus =
+>     minusAEqMinusB "u_minus v3 == model u_minus"
+>         modelUMinusIntervalSet uMinusIntervalSetv3
+
+> uMinusv4EqModelUMinus :: T.TestTree
+> uMinusv4EqModelUMinus =
+>     minusAEqMinusB "u_minus v4 == model u_minus"
+>         modelUMinusIntervalSet uMinusIntervalSetv4
+
+> uMinusv5EqModelUMinus :: T.TestTree
+> uMinusv5EqModelUMinus =
+>     minusAEqMinusB "u_minus v5 == model u_minus"
+>         modelUMinusIntervalSet uMinusIntervalSetv5
+
+
 
 ---------------------------------------
 
@@ -182,5 +198,8 @@ testing boilerplate
 > main = T.defaultMain $
 >        (T.testGroup "tests" [makeTasty allTests
 >                             ,intervalSetsPackAndUnpack
->                             ,streamUMinusEqModelUMinus])
+>                             ,uMinusv2EqModelUMinus
+>                             ,uMinusv3EqModelUMinus
+>                             ,uMinusv4EqModelUMinus
+>                             ,uMinusv5EqModelUMinus])
 
