@@ -1,0 +1,6 @@
+
+Small, currently haskell project to implement a rought u_minus
+relational operator, and then to use this to create some helpers for
+analysing lists of events (with start and end time), which may be
+nested, particularly to get the times of an event without including
+the times of any contained events. This is for a toy profiling system.
