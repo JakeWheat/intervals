@@ -1,10 +1,6 @@
 
 > module ArbitraryIntervals
->        ({-Q.generate
->        ,Q.sample'
->        ,Q.sample
->        ,Q.arbitrary
->        ,-}QG.unGen
+>        (QG.unGen
 >        ,Q.arbitrary
 >        ,QR.mkQCGen
 >        ) where

@@ -1,18 +1,6 @@
 
 > module Main where
 
-plan:
-start with interval type
-then add sets of intervals
-then add pack and unpack for these (for a single column)
-then do pack and unpack with a payload
-then implement u_minus via pack and unpack
-then implement faster u_minus using sort without unpack
-see if this can be used in sql
-ultimately, want to process all the layered events
-maybe start with unpack implementation
-then move to a sort/streaming implementation
-
 > import Intervals
 > import ArbitraryIntervals ()
 > import qualified Test.Tasty as T
@@ -57,7 +45,7 @@ then move to a sort/streaming implementation
 
 >     ]
 
-
+TODO:
 check an interval list, and then same list in random order are the
 same after makeintervalset
 
@@ -141,6 +129,12 @@ quickcheck this against the model
 >     minusAEqMinusB "u_minus v5 == model u_minus"
 >         modelUMinusIntervalSet uMinusIntervalSetv5
 
+> uMinusv6EqModelUMinus :: T.TestTree
+> uMinusv6EqModelUMinus =
+>     minusAEqMinusB "u_minus v6 == model u_minus"
+>         modelUMinusIntervalSet uMinusIntervalSetv6
+
+
 
 
 ---------------------------------------
@@ -201,5 +195,6 @@ testing boilerplate
 >                             ,uMinusv2EqModelUMinus
 >                             ,uMinusv3EqModelUMinus
 >                             ,uMinusv4EqModelUMinus
->                             ,uMinusv5EqModelUMinus])
+>                             ,uMinusv5EqModelUMinus
+>                             ,uMinusv6EqModelUMinus])
 

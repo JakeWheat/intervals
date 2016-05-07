@@ -1,0 +1,40 @@
+
+figure out how to run more quickcheck tests
+figure out how to generate bigger individual data values for the
+   benchmarking
+
+do writeup on the optimisation so far (maybe try to benchmark with
+   real data first)
+
+Implement u_minus with payload:
+packRelation, unpackRelation, modelUMinusRelation, uMinusRelation
+these are the above with a payload for each entry
+
+separate out into different modules:
+model, intermediate implementations, final implementation
+
+
+Implement the self times using slow join approach
+try to test using the generator approach
+Implement self times using fast streaming
+
+get some real world data to benchmark
+
+implement the algorithm in postgres and compare times
+
+
+feature ideas:
+add more interval operations with tests
+
+
+
+optimisation ideas:
+make the uminus a bit more streaming
+use a variation of vector or list of vectors to represent interval
+  sets
+use completely unpacked columnar data representation
+benchmark running pack on already packed
+benchmark running isPacked function
+make sure we don't repeat packing
+get ghc profiling and code coverage working (coverage is more useful
+   for monitoring the effectiveness of the testing)

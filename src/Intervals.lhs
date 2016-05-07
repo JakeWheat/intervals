@@ -1,5 +1,5 @@
 
-> {-# LANGUAGE DeriveGeneric #-}
+> {-# LANGUAGE DeriveGeneric,MultiWayIf #-}
 > module Intervals
 >        (Interval(..)
 >        ,makeInterval
@@ -14,6 +14,9 @@
 >        ,uMinusIntervalSetv3
 >        ,uMinusIntervalSetv4
 >        ,uMinusIntervalSetv5
+>        ,uMinusIntervalSetv6
+>        ,intervalSetsEquivalent
+>        ,isLength
 >        ) where
 
 > import Data.List (nub,sort,(\\))
@@ -35,6 +38,8 @@ maybe change interval set to vector or something for speed?
 > data IntervalSet = IS [Interval]
 >                    deriving (Eq,Show,Generic)
 
+> isLength :: IntervalSet -> Int
+> isLength (IS is) = length is
 
 does sort and unique:
 
@@ -68,6 +73,11 @@ does sort and unique:
 >     merges a b c d =
 >         let m1 x y z = (x <= z && y >= z) || (y + 1 == z)
 >         in m1 a b c || m1 c d a
+
+todo: some trivial tests for intervalSetsEquivalent
+
+> intervalSetsEquivalent :: IntervalSet -> IntervalSet -> Bool
+> intervalSetsEquivalent a b = packIntervalSet' a == packIntervalSet' b
 
 > unpackIntervalSet :: IntervalSet -> IntervalSet
 > unpackIntervalSet (IS is) =
@@ -185,68 +195,50 @@ new algorithm still using packing and unpacking:
 >         in a1 \\ concatMap snd is
 
 
+finally without unpacking
 
-
-> {-uMinusIntervalSetv3 :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSetv3 (IS is0) (IS is1) =
->     packIntervalSet' $ makeIntervalSet $ f is0 is1
+> uMinusIntervalSetv6 :: IntervalSet -> IntervalSet -> IntervalSet
+> uMinusIntervalSetv6 is0' is1' =
+>     let IS is0 = packIntervalSet' is0'
+>         IS is1 = packIntervalSet' is1'
+>     in packIntervalSet' $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
 >     f i0s [] = i0s
 >     f (i0:i0s) i1s =
+>         -- this uses a kind of sort merge approach
+>         -- maybe it can be optimised better?
+>         -- because the intervals are packed,
+>         -- I think we never need to look at a interval twice
+>         -- which we do here because of keepI1s and matchingI1s
 >         let keepI1s = dropWhile (`strictlyLessThan` i0) i1s
 >             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0) keepI1s
 >         in subtractInterval i0 matchingI1s ++ f i0s keepI1s
 >     strictlyLessThan (I _ b) (I c _) = b < c
 >     strictlyGreaterThan (I a _) (I _ d) = d < a
+>     -- this uses the fact that the second list of intervals is
+>     -- packed and sorted
 >     subtractInterval :: Interval -> [Interval] -> [Interval]
 >     subtractInterval (I a b) [] = [I a b]
->     subtractInterval i@(I a b) ((I c d):is)
->         | d < a || b < c = subtractInterval i is
->          -- overlaps completely
->         | c <= a &&  d >= b -> []
->          -- overlaps start
->         | c <= a &&  d >= b -> []
->          -- overlaps end
->          -- overlaps middle
->     
->     subtractInterval (I a b) is =
->         let (IS a1) = unpackIntervalSet $ IS [I a b]
->             (IS a2) = unpackIntervalSet $ IS is
->         in a1 \\ a2 -}
+>     subtractInterval (I a b) ((I c d):is) =
+>         -- check for 2 impossible conditions first
+>         -- can remove these when working and trust the testing enough
+>         if -- interval 2 is completely before interval 1
+>            {-  | d < a -> subtractInterval i is
+>            -- interval 2 is completely after interval 1
+>            | b < c -> [i] -}
+>              -- interval 2 covers interval one completely
+>            | c <= a && d >= b -> []
+>              -- interval 2 overlaps the start of interval one
+>            | c <= a && d < b-> subtractInterval (I (d + 1) b) is
+>              -- interval 2 overlaps the end of interval one
+>            | c > a && d >= b -> [I a (c - 1)]
+>              -- interval 2 appears in the middle of interval one
+>            | a < c && b > d -> I a (c - 1)
+>                                : subtractInterval (I (d + 1) b) is
+>            --  | otherwise -> error "impossible?"
 
 
 > uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSet = uMinusIntervalSetv2
-
-now: packRelation, unpackRelation, modelUMinusRelation, uMinusRelation
-these are the above with a payload for each entry
-
-create separate modules, with model and optimised implementations
-
-
-then:
-self times using slow join
-
-do a few example checks
-see if can do the generator test
-
-
-self times using streaming implementation
-can test against the generator
-and against the model implementation
-
-use criterion to check optimisations
-implement the algorithm in postgres and compare times
-
-
-
-some optimisation ideas:
-
-use a variation of vector or list of vectors to represent interval
-  sets
-benchmark running pack on already packed
-benchmark running isPacked function
-make sure we don't repeat packing
-get ghc profiling and code coverage working
+> uMinusIntervalSet = uMinusIntervalSetv6
 

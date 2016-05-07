@@ -3,10 +3,8 @@
 > import Criterion.Main
 > import Intervals
 > import ArbitraryIntervals
-> -- import qualified Test.QuickCheck.Random as QR
 
-> -- import Test.QuickCheck.Gen as QG
-> --import Data.List (intercalate)
+> import Data.List (intercalate)
 
 > import Control.DeepSeq(force,NFData(..))
 > import Control.Exception(evaluate)
@@ -17,39 +15,48 @@
 > instance NFData IntervalSet where
 >     rnf = genericRnf
 
+> runMany :: [(a -> b)] -> [a] -> [b]
+> runMany fs as =
+>     zipWith ($) fs as
+
+
+> doUMinusTests :: NFData c =>
+>                  String
+>               -> (a -> b -> c)
+>               -> [(a, b)]
+>               -> Benchmark
+> doUMinusTests nm f ps = bench nm $
+>     let (as,bs) = unzip ps
+>         fs = zipWith ($) (repeat f) as
+>     in nf (runMany fs) bs
+
+> doPack :: NFData a =>
+>           String
+>        -> (b -> a)
+>        -> [b]
+>        -> Benchmark
+> doPack nm f as = bench nm $ nf (runMany (repeat f)) as
+
 > main :: IO ()
 > main = do
 >     -- generate a repeatable set of arbitrary values using a seed
 >     let x :: [IntervalSet]
->         x = unGen arbitrary (mkQCGen 10) 50 -- 500
+>         x = unGen arbitrary (mkQCGen 10) 52
 >     x1 <- evaluate $ force x
->     defaultMain
->         [bgroup "pack-simple"
->          $ let mb a b = bench ("pack-simple-" ++ show a)
->                         $ nf packIntervalSet b
->            in zipWith mb [(0::Int)..] x1
->         ,bgroup "pack-v2"
->          $ let mb a b = bench ("pack-v2-" ++ show a)
->                         $ nf packIntervalSet' b
->            in zipWith mb [(0::Int)..] x1
->         ,bgroup "model-u_minus"
->          $ let mb a (b,c) = bench ("model-u_minus-" ++ show a)
->                           $ nf (modelUMinusIntervalSet b) c
->            in zipWith mb [(0::Int)..] [ (b,c) | b <- x1, c <- x1 ]
->         ,bgroup "u_minus-v2"
->          $ let mb a (b,c) = bench ("u_minus-v2-" ++ show a)
->                           $ nf (uMinusIntervalSetv2 b) c
->            in zipWith mb [(0::Int)..] [ (b,c) | b <- x1, c <- x1 ]
->         ,bgroup "u_minus-v3"
->          $ let mb a (b,c) = bench ("u_minus-v3-" ++ show a)
->                           $ nf (uMinusIntervalSetv3 b) c
->            in zipWith mb [(0::Int)..] [ (b,c) | b <- x1, c <- x1 ]
->         ,bgroup "u_minus-v4"
->          $ let mb a (b,c) = bench ("u_minus-v4-" ++ show a)
->                           $ nf (uMinusIntervalSetv4 b) c
->            in zipWith mb [(0::Int)..] [ (b,c) | b <- x1, c <- x1 ]
->         ,bgroup "u_minus-v5"
->          $ let mb a (b,c) = bench ("u_minus-v5-" ++ show a)
->                           $ nf (uMinusIntervalSetv5 b) c
->            in zipWith mb [(0::Int)..] [ (b,c) | b <- x1, c <- x1 ]
+>     putStrLn $ "number of example datas: " ++ show (length x1)
+>              ++ "(" ++ intercalate "," (map (show . isLength) x1) ++ ")"
+>     let isInteresting a b = not $ intervalSetsEquivalent a
+>                             (a `uMinusIntervalSetv6` b)
+>         x1Pairs = filter (uncurry isInteresting)
+>                   [(a,b) | a <- x1, b <- x1]
+>     putStrLn $ "number of interesting data pairs: " ++ show (length x1Pairs)
+>     defaultMain $
+>         [doPack "pack-simple" packIntervalSet x1
+>         ,doPack "pack-v2" packIntervalSet' x1
+>         ,doUMinusTests "model-u_minus" modelUMinusIntervalSet x1Pairs
+>         --,doUMinusTests "u_minus-v2" uMinusIntervalSetv2 x1Pairs
+>         ,doUMinusTests "u_minus-v3" uMinusIntervalSetv3 x1Pairs
+>         ,doUMinusTests "u_minus-v4" uMinusIntervalSetv4 x1Pairs
+>         ,doUMinusTests "u_minus-v5" uMinusIntervalSetv5 x1Pairs
+>         ,doUMinusTests "u_minus-v6" uMinusIntervalSetv6 x1Pairs
 >         ]
