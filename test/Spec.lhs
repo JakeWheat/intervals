@@ -205,17 +205,51 @@ is0 u_minus is0
 >     ,UMinusISExample [I 1 3] [I 2 2] [I 1 1, I 3 3]
 >     ]
 
-u_minus for interval sets using stream implementation
+u_minus for interval sets using stream implementation, still uses
+unpack but not as much
+
+algo:
+
+consider the head of the first set: i0
+drop all the elements from i1s head which are strictly less than i0
+take all the elements from the head of i1s which aren't strictly
+greater than i0
+unpack i0, subtract each of the matching i1s without unpacking them
+then:
+take another i0 and loop
 
 
-> {-uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
+
+> uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
 > uMinusIntervalSet (IS is0) (IS is1) =
->   packIntervalSet'
+>     packIntervalSet' $ makeIntervalSet $ f is0 is1
 >   where
->     in packIntervalSet $ makeIntervalSet resu-}
+>     f [] _ = []
+>     f i0s [] = i0s
+>     f (i0:i0s) i1s =
+>         let keepI1s = dropWhile (`strictlyLessThan` i0) i1s
+>             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0) keepI1s
+>         in subtract i0 matchingI1s ++ f i0s keepI1s
+>     strictlyLessThan (I _ b) (I c _) = b < c
+>     strictlyGreaterThan (I a b) (I c d) = d < a
+>     subtract (I a b) is =
+>         let (IS a1) = unpackIntervalSet $ IS [I a b]
+>             (IS a2) = unpackIntervalSet $ IS is
+>         in a1 \\ a2
 
+todo: subtract is very poor
+fix 1: only unpack the first arg
+fix 2: don't unpack the second arg
 
 quickcheck this against the model
+
+> streamUMinusEqModelUMinus :: T.TestTree
+> streamUMinusEqModelUMinus =
+>     Q.testProperty  "streaming u_minus == model u_minus" $
+>     \l1 l2 -> let i1 = makeIntervalSet l1
+>                   i2 = makeIntervalSet l2
+>           in (i1 `modelUMinusIntervalSet` i2)
+>              == (i1 `uMinusIntervalSet` i2)
 
 
 now: packRelation, unpackRelation, modelUMinusRelation, uMinusRelation
@@ -289,5 +323,6 @@ implement the algorithm in postgres and compare times
 > main :: IO ()
 > main = T.defaultMain $
 >        (T.testGroup "tests" [makeTasty allTests
->                             ,intervalSetsPackAndUnpack])
+>                             ,intervalSetsPackAndUnpack
+>                             ,streamUMinusEqModelUMinus])
 
