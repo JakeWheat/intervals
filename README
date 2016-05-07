@@ -1,6 +1,86 @@
 
-Small, currently haskell project to implement a rought u_minus
+Small, currently haskell project to implement a rough u_minus
 relational operator, and then to use this to create some helpers for
 analysing lists of events (with start and end time), which may be
 nested, particularly to get the times of an event without including
-the times of any contained events. This is for a toy profiling system.
+the times of any contained events, 'self times'. This is for a toy
+profiling system.
+
+Here is the initial self times code in postgresql, which is pretty
+slow, and I can't find an easy way to convince myself it is correct.
+
+This project is reimplementing this calculation in haskell, with
+proper tests, and eventually hopefully a nice optimised implementation
+which can either be ported to postgres SQL, or possibly implemented as
+a helper function in haskell or c++.
+
+create type mini_event as (
+  timer_id bigint,
+  start_time float,
+  stop_time float
+);
+
+CREATE or replace FUNCTION sub_times(evs mini_event[]) RETURNS
+mini_event[] AS $$
+    select array(select (timer_id,start_time,stop_time)::mini_event
+                 from unnest(evs) e1
+            where not exists(select 1 from unnest(evs) e2
+                             where e1.start_time <= e2.start_time
+                               and e1.stop_time >= e2.stop_time
+                               and e1.timer_id != e2.timer_id
+                               ));
+$$ LANGUAGE sql;
+
+CREATE or replace FUNCTION sum_times(evs mini_event[]) RETURNS float AS $$
+    select sum(stop_time - start_time) from unnest(evs) e1;
+$$ LANGUAGE sql;
+
+create view events_self_times as
+with
+events_extra as (
+select *,
+       array(select (e2.timer_id,e2.start_time,e2.stop_time)::mini_event
+             from events e2
+             where e1.thread_id = e2.thread_id
+             and e1.profile_id = e2.profile_id
+             and e2.start_time > e1.start_time
+             and e2.stop_time < e1.stop_time) as sub_events
+from events e1),
+events_immediate_extra as (
+select *,
+       sub_times(sub_events) as immediate_sub_events
+from events_extra e1)
+select profile_id,
+       name,
+       timer_id,
+       statement_id,
+       node_id,
+       thread_id,
+       start_time,
+       stop_time,
+       stop_time - start_time as total_time,
+       (stop_time - start_time) -
+           coalesce(sum_times(immediate_sub_events),0) as self_time
+from events_immediate_extra
+order by total_time desc
+;
+
+select profile_id,
+       name,
+       timer_id,
+       statement_id,
+       node_id,
+       thread_id,
+       to_char(start_time, '0.000') as start_time,
+       to_char(stop_time, '0.000') as stop_time,
+       to_char(total_time, '0.000') as total_time,
+       to_char(self_time, '0.000') as self_time
+from events_self_times;
+
+select name,
+       count(1) as num,
+       to_char(sum(self_time), '0.000') as time
+from events_self_times
+where profile_id = 2
+group by name
+order by sum(self_time) desc;
