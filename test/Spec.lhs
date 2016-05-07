@@ -90,8 +90,8 @@ check that pack . unpack = unpack
 >     Q.testProperty  "pack . pack = pack" $
 >     \is -> (pack . pack) is == pack is
 
-> uMinusISExamples :: Test
-> uMinusISExamples = Group "UMinusISExamples"
+> uminusISExamples :: Test
+> uminusISExamples = Group "UMinusISExamples"
 >     [UMinusISExample [] [] []
 >     ,UMinusISExample [] [I 1 1] []
 >     ,UMinusISExample [I 1 1] [I 1 1] []
@@ -109,30 +109,30 @@ quickcheck this against the model
 > minusAEqMinusB nm f0 f1 =
 >     Q.testProperty nm $ \i0 i1 -> (i0 `f0` i1) == (i0 `f1` i1)
 
-> uMinusv2EqModelUMinus :: T.TestTree
-> uMinusv2EqModelUMinus =
+> uminusv2EqModelUMinus :: T.TestTree
+> uminusv2EqModelUMinus =
 >     minusAEqMinusB "u_minus v2 == model u_minus"
->         modelUMinusIntervalSet uMinusIntervalSetv2
+>         uminusIntervalSetModel uminusIntervalSetv2
 
-> uMinusv3EqModelUMinus :: T.TestTree
-> uMinusv3EqModelUMinus =
+> uminusv3EqModelUMinus :: T.TestTree
+> uminusv3EqModelUMinus =
 >     minusAEqMinusB "u_minus v3 == model u_minus"
->         modelUMinusIntervalSet uMinusIntervalSetv3
+>         uminusIntervalSetModel uminusIntervalSetv3
 
-> uMinusv4EqModelUMinus :: T.TestTree
-> uMinusv4EqModelUMinus =
+> uminusv4EqModelUMinus :: T.TestTree
+> uminusv4EqModelUMinus =
 >     minusAEqMinusB "u_minus v4 == model u_minus"
->         modelUMinusIntervalSet uMinusIntervalSetv4
+>         uminusIntervalSetModel uminusIntervalSetv4
 
-> uMinusv5EqModelUMinus :: T.TestTree
-> uMinusv5EqModelUMinus =
+> uminusv5EqModelUMinus :: T.TestTree
+> uminusv5EqModelUMinus =
 >     minusAEqMinusB "u_minus v5 == model u_minus"
->         modelUMinusIntervalSet uMinusIntervalSetv5
+>         uminusIntervalSetModel uminusIntervalSetv5
 
-> uMinusv6EqModelUMinus :: T.TestTree
-> uMinusv6EqModelUMinus =
+> uminusv6EqModelUMinus :: T.TestTree
+> uminusv6EqModelUMinus =
 >     minusAEqMinusB "u_minus v6 == model u_minus"
->         modelUMinusIntervalSet uMinusIntervalSetv6
+>         uminusIntervalSetModel uminusIntervalSetv6
 
 
 
@@ -175,9 +175,9 @@ testing boilerplate
 >     H.assertEqual "" iu0 iu1
 
 > makeTasty (UMinusISExample a b c) =
->     H.testCase "uMinusISExample" $ do
+>     H.testCase "uminusISExample" $ do
 >     H.assertEqual "" (makeIntervalSet c)
->         (modelUMinusIntervalSet (makeIntervalSet a)
+>         (uminusIntervalSetModel (makeIntervalSet a)
 >                                 (makeIntervalSet b))
 
 
@@ -186,15 +186,15 @@ testing boilerplate
 > allTests = Group "hunit tests"
 >     [intervalExamples
 >     ,intervalSetExamples
->     ,uMinusISExamples]
+>     ,uminusISExamples]
 
 > main :: IO ()
 > main = T.defaultMain $
 >        (T.testGroup "tests" [makeTasty allTests
 >                             ,intervalSetsPackAndUnpack
->                             --,uMinusv2EqModelUMinus
->                             ,uMinusv3EqModelUMinus
->                             ,uMinusv4EqModelUMinus
->                             ,uMinusv5EqModelUMinus
->                             ,uMinusv6EqModelUMinus])
+>                             --,uminusv2EqModelUMinus
+>                             ,uminusv3EqModelUMinus
+>                             ,uminusv4EqModelUMinus
+>                             ,uminusv5EqModelUMinus
+>                             ,uminusv6EqModelUMinus])
 

@@ -1,27 +1,46 @@
 
 > {-# LANGUAGE DeriveGeneric,MultiWayIf #-}
 > module Intervals
->        (Interval(..)
+>        (-- * basic intervals
+>         Interval(..)
 >        ,makeInterval
+>         -- * simple sets of intervals
 >        ,IntervalSet
 >        ,makeIntervalSet
->        ,intervalSetsEquivalent
 >        ,isLength
+>         -- * packing and unpacking sets of intervals
 >        ,packIntervalSetModel
 >        ,packIntervalSetv2
 >        ,packIntervalSet
 >        ,unpackIntervalSet
->        ,modelUMinusIntervalSet
->        ,uMinusIntervalSet
->        ,uMinusIntervalSetv2
->        ,uMinusIntervalSetv3
->        ,uMinusIntervalSetv4
->        ,uMinusIntervalSetv5
->        ,uMinusIntervalSetv6
+>        ,intervalSetsEquivalent
+>         -- * u_minus on interval sets
+>        ,uminusIntervalSetModel
+>        ,uminusIntervalSet
+>        ,uminusIntervalSetv2
+>        ,uminusIntervalSetv3
+>        ,uminusIntervalSetv4
+>        ,uminusIntervalSetv5
+>        ,uminusIntervalSetv6
+>         -- * relations
+>        ,Relation
+>        ,makeRelation
+>        ,relationCount
+>         -- * packing and unpacking on relations
+>        ,unpackRelation
+>        ,packRelationv2
+>        ,packRelation
+>        ,relationsEquivalent
+>         -- * u_minus for relations
+>        -- ,uminusModel
+>        ,uminusv2
+>        ,uminus
 >        ) where
 
-> import Data.List (nub,sort,(\\))
+> import Data.List (nub,sort,(\\)) --, sortBy)
+> --import Data.Ord (comparing)
 > import GHC.Generics (Generic)
+> import Control.Arrow (second)
 
 > data Interval = I Integer Integer
 >                 deriving (Ord, Eq,Show,Generic)
@@ -50,30 +69,30 @@ does sort and unique:
 
 > packIntervalSetModel :: IntervalSet -> IntervalSet
 > packIntervalSetModel tis' =
->   let (IS tis) = unpackIntervalSet tis'
->   in makeIntervalSet $ combineIs tis
+>     let (IS tis) = unpackIntervalSet tis'
+>     in makeIntervalSet $ combineIs tis
 >   where
 >     combineIs [] = []
 >     combineIs i@[_] = i
->     combineIs ((I a b):is@((I c d):is1))
+>     combineIs (i@(I a b):is@((I c d):is1))
 >         | b + 1 == c = combineIs ((I a d):is1)
->         | otherwise = (I a b):combineIs is
+>         | otherwise = i:combineIs is
 
 'optimised' version of pack which doesn't go via unpack
 
 > packIntervalSetv2 :: IntervalSet -> IntervalSet
 > packIntervalSetv2 (IS tis) =
->   makeIntervalSet $ combineIs tis
+>     makeIntervalSet $ combineIs tis
 >   where
 >     combineIs [] = []
 >     combineIs i@[_] = i
->     combineIs ((I a b):is@((I c d):is1))
+>     combineIs (i@(I a b):is@((I c d):is1))
 >         | merges a b c d = combineIs ((I (min a c) (max b d)):is1)
->         | otherwise = (I a b):combineIs is
+>         | otherwise = i:combineIs is
 >     -- todo: split this function out and test it
->     merges a b c d =
+>     merges a b c _d =
 >         let m1 x y z = (x <= z && y >= z) || (y + 1 == z)
->         in m1 a b c || m1 c d a
+>         in m1 a b c --  || m1 c d a
 
 
 > packIntervalSet :: IntervalSet -> IntervalSet
@@ -90,17 +109,17 @@ todo: some trivial tests for intervalSetsEquivalent
 >   where
 >     unpackInterval (I a b) = [I c c | c <- [a..b]]
 
-> modelUMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
-> modelUMinusIntervalSet is0 is1 =
+> uminusIntervalSetModel :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSetModel is0 is1 =
 >     let (IS iu0) = unpackIntervalSet is0
 >         (IS iu1) = unpackIntervalSet is1
 >         resu = iu0 \\ iu1
 >     in packIntervalSet $ makeIntervalSet resu
 
 
-u_minus for interval sets using stream implementation, still uses
-unpack but not as much (the current implementation uses unpack way
-more than the original at the moment)
+
+series of u_minus implementations. Not that interesting. The v6 below
+is _almost_ the starting point of a naive implementation.
 
 algo:
 
@@ -112,8 +131,8 @@ unpack i0, subtract each of the matching i1s without unpacking them
 then:
 take another i0 and loop
 
-> uMinusIntervalSetv2 :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSetv2 (IS is0) (IS is1) =
+> uminusIntervalSetv2 :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSetv2 (IS is0) (IS is1) =
 >     packIntervalSet $ makeIntervalSet $ f is0 is1
 >   where
 >     f [] _ = []
@@ -135,8 +154,8 @@ fix 1: only unpack the first arg
 fix 2: don't unpack the second arg
 
 
-> uMinusIntervalSetv3 :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSetv3 (IS is0) is1' =
+> uminusIntervalSetv3 :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSetv3 (IS is0) is1' =
 >     let IS is1 = packIntervalSet is1'
 >     in packIntervalSet $ makeIntervalSet $ f is0 is1
 >   where
@@ -154,8 +173,8 @@ fix 2: don't unpack the second arg
 >             (IS a2) = unpackIntervalSet $ IS is
 >         in a1 \\ a2
 
-> uMinusIntervalSetv4 :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSetv4 is0' is1' =
+> uminusIntervalSetv4 :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSetv4 is0' is1' =
 >     let IS is0 = packIntervalSet is0'
 >         IS is1 = packIntervalSet is1'
 >     in packIntervalSet $ makeIntervalSet $ f is0 is1
@@ -176,8 +195,8 @@ fix 2: don't unpack the second arg
 
 new algorithm still using packing and unpacking:
 
-> uMinusIntervalSetv5 :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSetv5 is0' is1' =
+> uminusIntervalSetv5 :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSetv5 is0' is1' =
 >     let IS is0 = packIntervalSet is0'
 >         IS is1 = packIntervalSet is1'
 >         is1Unpacked = flip map is1
@@ -202,8 +221,8 @@ new algorithm still using packing and unpacking:
 
 finally without unpacking
 
-> uMinusIntervalSetv6 :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSetv6 is0' is1' =
+> uminusIntervalSetv6 :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSetv6 is0' is1' =
 >     let IS is0 = packIntervalSet is0'
 >         IS is1 = packIntervalSet is1'
 >     in packIntervalSet $ makeIntervalSet $ f is0 is1
@@ -224,7 +243,7 @@ finally without unpacking
 >     -- this uses the fact that the second list of intervals is
 >     -- packed and sorted
 >     subtractInterval :: Interval -> [Interval] -> [Interval]
->     subtractInterval (I a b) [] = [I a b]
+>     subtractInterval i [] = [i]
 >     subtractInterval (I a b) ((I c d):is) =
 >         -- check for 2 impossible conditions first
 >         -- can remove these when working and trust the testing enough
@@ -241,35 +260,71 @@ finally without unpacking
 >              -- interval 2 appears in the middle of interval one
 >            | a < c && b > d -> I a (c - 1)
 >                                : subtractInterval (I (d + 1) b) is
->            --  | otherwise -> error "impossible?"
 
+Next steps for this function are in the todo. want to eliminate the
+double passing in f, and then optimise the memory layouts of the
+data. The core algorithmic idea is probably good, possibly a hash
+based instead of sorting could work?
 
-> uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSet = uMinusIntervalSetv6
+> uminusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
+> uminusIntervalSet = uminusIntervalSetv6
 
 ------------------------------
 
 not really a relation, but an interval set with a payload per row
-it's sorted on the intervals
 
-> {-data Relation a = Relation [(Interval,a)]
+it's sorted on the intervals and doesn't support duplicate entries
 
-> makeRelation
+> data Relation a = Relation [(a,IntervalSet)]
+>                   deriving (Eq,Show,Generic)
 
-> relationCount
+> makeRelation :: Eq a => [(Interval,a)] -> Relation a
+> makeRelation es =
+>     let es' = partitionEntries es
+>     in Relation $ map (second makeIntervalSet) es'
 
-> 
+> partitionEntries :: Eq a => [(Interval,a)] -> [(a,[Interval])]
+> partitionEntries = undefined
 
-> unpackRelation :: 
+> relationCount :: Relation a -> Int
+> relationCount (Relation es) = sum $ map (isLength . snd) es
 
-> packRelationModel
 
-> packRelationv2
+TODO: code below is all wrong. Start by partitioning by the payload
+values, then just delegate to the set versions. Might be able to do a
+optimised unpack (but this operation is only really needed for
+testing).
 
-> packRelation
+> unpackRelation :: Eq a => Relation a -> Relation a
+> unpackRelation (Relation es) =
+>     Relation $ map (second unpackIntervalSet) es
 
-> uminusModel
 
-> uminusv2
+> packRelationv2 :: Eq a => Relation a -> Relation a
+> packRelationv2 (Relation es) =
+>     Relation $ map (second packIntervalSet) es
 
-> uminus-}
+
+> packRelation :: Eq a => Relation a -> Relation a
+> packRelation = packRelationv2
+
+> relationsEquivalent :: Eq a => Relation a -> Relation a -> Bool
+> relationsEquivalent a b = packRelation a == packRelation b
+
+> uminusv2 :: Eq a => Relation a -> Relation a -> Relation a
+> uminusv2 (Relation r0) (Relation r1) =
+>     -- for each value in r0
+>     -- find the corresponding value in r1
+>     -- and subtract
+>     -- if none found, then this op is id
+>     -- this process can probably be optimised easily if there
+>     -- are a lot of distinct values
+>     Relation $ map (flip minusMatching r1) r0
+>   where
+>     minusMatching (a,es0) [] = (a,es0)
+>     minusMatching (a,es0) ((b,es1):_)
+>       | a == b  = (a,uminusIntervalSet es0 es1)
+>     minusMatching e0 (_:es1) = minusMatching e0 es1
+
+> uminus :: Eq a => Relation a -> Relation a -> Relation a
+> uminus = uminusv2

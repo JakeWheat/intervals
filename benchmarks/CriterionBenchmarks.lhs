@@ -48,17 +48,17 @@
 >     putStrLn $ "number of example datas: " ++ show (length x1)
 >              ++ "(" ++ intercalate "," (map (show . isLength) x1) ++ ")"
 >     let isInteresting a b = not $ intervalSetsEquivalent a
->                             (a `uMinusIntervalSetv6` b)
+>                             (a `uminusIntervalSetv6` b)
 >         x1Pairs = filter (uncurry isInteresting)
 >                   [(a,b) | a <- x1, b <- x1]
 >     putStrLn $ "number of interesting data pairs: " ++ show (length x1Pairs)
 >     defaultMain $
 >         [doPack "pack-model" packIntervalSetModel x1
 >         ,doPack "pack-v2" packIntervalSetv2 x1
->         ,doUMinusTests "model-u_minus" modelUMinusIntervalSet x1Pairs
->         --,doUMinusTests "u_minus-v2" uMinusIntervalSetv2 x1Pairs
->         ,doUMinusTests "u_minus-v3" uMinusIntervalSetv3 x1Pairs
->         ,doUMinusTests "u_minus-v4" uMinusIntervalSetv4 x1Pairs
->         ,doUMinusTests "u_minus-v5" uMinusIntervalSetv5 x1Pairs
->         ,doUMinusTests "u_minus-v6" uMinusIntervalSetv6 x1Pairs
+>         ,doUMinusTests "model-u_minus" uminusIntervalSetModel x1Pairs
+>         --,doUMinusTests "u_minus-v2" uminusIntervalSetv2 x1Pairs
+>         --,doUMinusTests "u_minus-v3" uminusIntervalSetv3 x1Pairs
+>         --,doUMinusTests "u_minus-v4" uminusIntervalSetv4 x1Pairs
+>         --,doUMinusTests "u_minus-v5" uminusIntervalSetv5 x1Pairs
+>         ,doUMinusTests "u_minus-v6" uminusIntervalSetv6 x1Pairs
 >         ]
