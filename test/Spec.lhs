@@ -1,5 +1,5 @@
 
-
+> module Main where
 
 plan:
 start with interval type
@@ -15,36 +15,11 @@ then move to a sort/streaming implementation
 
 > import Data.List (nub,sort,(\\))
 
+> import Intervals
 
 > import qualified Test.Tasty as T
 > import qualified Test.Tasty.HUnit as H
 > import qualified Test.Tasty.QuickCheck as Q
-
-
-> data Interval = I Integer Integer
->                 deriving (Ord, Eq,Show)
-
-> --instance Ord Interval where
-> --  (I a b) `compare` (I c d) = (a,b) `compare` (c,d)
-
-what about representing unit intervals with a different ctor?
-
-> makeInterval :: Integer -> Integer -> Either String Interval
-> makeInterval b e =
->     if e < b
->     then Left $ "interval end is less than start: " ++ show (b,e)
->     else Right $ I b e
-
-tests:
-a few basic examples
-
-> intervalExamples :: Test
-> intervalExamples = Group "interval-examples"
->     [IntervalExample 1 1 $ Just $ I 1 1
->     ,IntervalExample 1 2 $ Just $ I 1 2
->     ,IntervalExample (-1) 2 $ Just $ I (-1) 2
->     ,IntervalExample 1 0 Nothing
->     ]
 
 > data Test = Group String [Test]
 >           | IntervalExample Integer Integer (Maybe Interval)
@@ -55,53 +30,14 @@ a few basic examples
 >           | IntervalSetUnpackExample [Interval] [Interval]
 >           | UMinusISExample [Interval] [Interval] [Interval]
 
-maybe change interval set to vector or something for speed?
 
-> data IntervalSet = IS [Interval]
->                    deriving (Eq,Show)
-
-
-does sort and unique:
-
-> makeIntervalSet :: [Interval] -> IntervalSet
-> makeIntervalSet is = IS $ sort $ nub is
-
-
-> packIntervalSet :: IntervalSet -> IntervalSet
-> packIntervalSet tis' =
->   let (IS tis) = unpackIntervalSet tis'
->   in makeIntervalSet $ combineIs tis
->   where
->     combineIs [] = []
->     combineIs i@[_] = i
->     combineIs ((I a b):is@((I c d):is1))
->         | b + 1 == c = combineIs ((I a d):is1)
->         | otherwise = (I a b):combineIs is
-
-'optimised' version of pack which doesn't go via unpack
-
-> packIntervalSet' :: IntervalSet -> IntervalSet
-> packIntervalSet' (IS tis) =
->   makeIntervalSet $ combineIs tis
->   where
->     combineIs [] = []
->     combineIs i@[_] = i
->     combineIs ((I a b):is@((I c d):is1))
->         | merges a b c d = combineIs ((I (min a c) (max b d)):is1)
->         | otherwise = (I a b):combineIs is
->     -- todo: split this function out and test it
->     merges a b c d =
->         let m1 x y z = (x <= z && y >= z) || (y + 1 == z)
->         in m1 a b c || m1 c d a
-
-> unpackIntervalSet :: IntervalSet -> IntervalSet
-> unpackIntervalSet (IS is) =
->     makeIntervalSet $ concatMap unpackInterval is
->   where
->     unpackInterval (I a b) = [I c c | c <- [a..b]]
-
-todo:
-a few basic examples
+> intervalExamples :: Test
+> intervalExamples = Group "interval-examples"
+>     [IntervalExample 1 1 $ Just $ I 1 1
+>     ,IntervalExample 1 2 $ Just $ I 1 2
+>     ,IntervalExample (-1) 2 $ Just $ I (-1) 2
+>     ,IntervalExample 1 0 Nothing
+>     ]
 
 > intervalSetExamples :: Test
 > intervalSetExamples = Group "intervalSet-examples"
@@ -182,19 +118,6 @@ check that pack . unpack = unpack
 >           in (pack . pack) is
 >               == pack is
 
-
-
-u_minus for interval sets using unpack
-
-is0 u_minus is0
-
-> modelUMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
-> modelUMinusIntervalSet is0 is1 =
->     let (IS iu0) = unpackIntervalSet is0
->         (IS iu1) = unpackIntervalSet is1
->         resu = iu0 \\ iu1
->     in packIntervalSet' $ makeIntervalSet resu
-
 > uMinusISExamples :: Test
 > uMinusISExamples = Group "UMinusISExamples"
 >     [UMinusISExample [] [] []
@@ -204,42 +127,6 @@ is0 u_minus is0
 >     ,UMinusISExample [I 1 2] [I 1 1] [I 2 2]
 >     ,UMinusISExample [I 1 3] [I 2 2] [I 1 1, I 3 3]
 >     ]
-
-u_minus for interval sets using stream implementation, still uses
-unpack but not as much
-
-algo:
-
-consider the head of the first set: i0
-drop all the elements from i1s head which are strictly less than i0
-take all the elements from the head of i1s which aren't strictly
-greater than i0
-unpack i0, subtract each of the matching i1s without unpacking them
-then:
-take another i0 and loop
-
-
-
-> uMinusIntervalSet :: IntervalSet -> IntervalSet -> IntervalSet
-> uMinusIntervalSet (IS is0) (IS is1) =
->     packIntervalSet' $ makeIntervalSet $ f is0 is1
->   where
->     f [] _ = []
->     f i0s [] = i0s
->     f (i0:i0s) i1s =
->         let keepI1s = dropWhile (`strictlyLessThan` i0) i1s
->             matchingI1s = takeWhile (not . flip strictlyGreaterThan i0) keepI1s
->         in subtract i0 matchingI1s ++ f i0s keepI1s
->     strictlyLessThan (I _ b) (I c _) = b < c
->     strictlyGreaterThan (I a b) (I c d) = d < a
->     subtract (I a b) is =
->         let (IS a1) = unpackIntervalSet $ IS [I a b]
->             (IS a2) = unpackIntervalSet $ IS is
->         in a1 \\ a2
-
-todo: subtract is very poor
-fix 1: only unpack the first arg
-fix 2: don't unpack the second arg
 
 quickcheck this against the model
 
@@ -251,27 +138,9 @@ quickcheck this against the model
 >           in (i1 `modelUMinusIntervalSet` i2)
 >              == (i1 `uMinusIntervalSet` i2)
 
+---------------------------------------
 
-now: packRelation, unpackRelation, modelUMinusRelation, uMinusRelation
-these are the above with a payload for each entry
-
-create separate modules, with model and optimised implementations
-
-
-then:
-self times using slow join
-
-do a few example checks
-see if can do the generator test
-
-
-self times using streaming implementation
-can test against the generator
-and against the model implementation
-
-use criterion to check optimisations
-implement the algorithm in postgres and compare times
-
+testing boilerplate
 
 
 > makeTasty :: Test -> T.TestTree
